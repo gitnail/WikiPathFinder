@@ -5,6 +5,30 @@ import requests
 from lxml.html import fromstring
 from lxml import html
 
+
+import re, math
+from collections import Counter
+
+WORD = re.compile(r'\w+')
+
+def get_cosine(vec1, vec2):
+    intersection = set(vec1.keys()) & set(vec2.keys())
+    numerator = sum([vec1[x] * vec2[x] for x in intersection])
+
+    sum1 = sum([vec1[x]**2 for x in vec1.keys()])
+    sum2 = sum([vec2[x]**2 for x in vec2.keys()])
+    denominator = math.sqrt(sum1) * math.sqrt(sum2)
+
+    if not denominator:
+        return 0.0
+    else:
+        return float(numerator) / denominator
+
+def text_to_vector(text):
+    words = WORD.findall(text)
+    return Counter(words)
+
+
 class Queue:
     def __init__(self):
         self.a = []
@@ -55,6 +79,12 @@ def getLinks(url):
     except:
         return []
 
+def get_page(url):
+    try:
+        r = requests.get(url)
+        return r.text
+    except:
+        return "no page" 
 def getTitle(url):
     try:
         r = requests.get(url)
@@ -76,6 +106,9 @@ if __name__ == '__main__':
     end_t = getTitle(end)
     print("Going from " + '"' + getTitle(start) + '"' + " to " '"' + end_t + '"')
     q = Queue()
+
+    end_word_vector = text_to_vector(get_page(end))
+    
     q.push([start, getTitle(start)])
     d = {}
     d[getTitle(start)] = 0
@@ -88,6 +121,7 @@ if __name__ == '__main__':
         q.pop()
         links = getLinks(v)
         print(v_t)
+        print("similarity to end page ", round(get_cosine(end_word_vector, text_to_vector(get_page(v))) * 10000))
         print("current deep = " + str(d[v_t]))
         for link, link_t in links:
             if link_t not in d:
@@ -97,7 +131,3 @@ if __name__ == '__main__':
                     exit(0)
                 q.push([link, link_t])
 print("Can't get end link")
-
-
-
-
